@@ -11,7 +11,7 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_exempt
 from customeruserapp.generateshoppingcode import generate_unique_code
-from customeruserapp.paystackViews import decreaseAccountBalance
+from customeruserapp.paystackViews import confirmBalanceIsEnough, decreaseAccountBalance
 from customeruserapp.utils.bilasAuth import getBilasToken
 from customeruserapp.utils.datasub.dataPurchaseFxn import PurchaseData
 # from customeruserapp.utils.generateshoppingcode import generate_unique_code
@@ -247,7 +247,7 @@ def SaveShoppinglist(request):
 
     # --- Step 3: Deduct balance ---
     decreaseAccountBalance(request, totalCostOfItems)
-    # NotificationActivity.objects.create()
+    NotificationActivity.objects.create(user = request.user, transactionEffect = 'Subtract', activityTtile = 'Shopped', deliveryStatus = 'Successfull', amountSpent = totalCostOfItems)
 
     # --- Step 4: Now save shopping list items ---
     data = getErrandPerson.data
@@ -407,21 +407,31 @@ def BilasDataPurchase(request):
         planID = serializer.data['planID']
         phoneNumber = serializer.data['phoneNumber']
         networkID = serializer.data['networkID']
+        cost = serializer.data['cost']
         print("serializer.data['phoneNumber']")
         print(serializer.data['phoneNumber'])
+        print(serializer.data['cost'])
         
         if DataPlans.objects.filter(id = planID).exists():
             tokeGen = getBilasToken(request)
             if tokeGen.status_code == 200:
                 data = tokeGen.data 
                 token = data.get("token")
-                # getPlan = DataPlans.objects.get(id = planID)
-                # selectedPlanID = getPlan.planID
                 username = request.user.email.split('@')[0]
                 timestamp = int(timezone.now().timestamp())
                 dataRequestID = f'${username}-${timestamp}'
-                PurchaseDataRes = PurchaseData(token, networkID, planID, dataRequestID, phoneNumber)
                 
+                # check account balance is enough for transaction
+                checkAccountStatus = confirmBalanceIsEnough(request, cost)
+                if checkAccountStatus == 'Success':
+                    pass
+                else:
+                    return Response({
+                            "status": status.HTTP_400_BAD_REQUEST,
+                            'message': 'Insufficient account balance to manage this transaction'
+                        })
+                    
+                PurchaseDataRes = PurchaseData(token, networkID, planID, dataRequestID, phoneNumber)
                 if PurchaseDataRes.data["status"] == 400:
                     # error occured
                     return Response({
@@ -430,8 +440,16 @@ def BilasDataPurchase(request):
                         })
                     
                 elif PurchaseDataRes.data["status"] == 200:
+                    # charge user for transaction here
+                    decreaseAccountBalance(request, cost)
+                    
                     recordDataSub = DataSubscriptionDeliveries(user = request.user, dataPlanSelected = planID, phone = phoneNumber, dataDisbursmentStatus = 'Success')
                     recordDataSub.save()
+                    
+                    # save notification
+                    NotificationActivity.objects.create(user = request.user, transactionEffect = 'Subtract', activityTtile = 'Data', deliveryStatus = 'Successfull', amountSpent = cost)
+                    
+                    # 
                     return Response({
                             "status": status.HTTP_200_OK,
                             'message': PurchaseDataRes.data["api_response"]["message"]

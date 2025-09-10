@@ -49,6 +49,7 @@ class RenewCableTVServiceSerializer(serializers.Serializer):
 class PurchaseDataSerializer(serializers.Serializer):
     phoneNumber = serializers.CharField()
     planID = serializers.IntegerField()
+    cost = serializers.CharField()
     networkID = serializers.IntegerField()
 
 

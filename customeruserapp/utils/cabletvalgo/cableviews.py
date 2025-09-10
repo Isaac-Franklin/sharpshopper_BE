@@ -8,6 +8,7 @@ from django.db.models import Q
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_exempt
+from customeruserapp.paystackViews import confirmBalanceIsEnough, decreaseAccountBalance
 from customeruserapp.utils.bilasAuth import getBilasToken
 from customeruserapp.utils.datasub.dataPurchaseFxn import PurchaseData
 from customeruserapp.utils.vpassurls import CableTCSubscriptionAlgo, vpassUrls
@@ -201,6 +202,17 @@ def RenewCableTVService(request):
                 'phone': phoneNumber,
                 'subscription_type': 'renew',
             }
+                
+            # check account balance is enough for transaction
+            checkAccountStatus = confirmBalanceIsEnough(request, amount)
+            if checkAccountStatus == 'Success':
+                pass
+            else:
+                return Response({
+                        "status": status.HTTP_400_BAD_REQUEST,
+                        'message': 'Insufficient account balance to manage this transaction'
+                    })
+                    
             
             try:
                 cable_algo = CableTCSubscriptionAlgo(cabletvProvider)
@@ -224,6 +236,12 @@ def RenewCableTVService(request):
                         customerName = CustomerSetupResponse['content']['Customer_Name']
                         cabletvsave = SaveCableTVPurchases(user = request.user, smartcardTVorIUCNumber = smartCardNumber, product_name = cabletvProvider, customerName= customerName, requestId = requestID, amount = amount)
                         cabletvsave.save()
+                        
+                        # reduce amount from wallet
+                        decreaseAccountBalance(request, amount)
+                        
+                        # save notification
+                        NotificationActivity.objects.create(user = request.user, transactionEffect = 'Subtract', activityTtile = 'Cable', deliveryStatus = 'Successfull', amountSpent = amount)
                         
                         # 
                         return Response({

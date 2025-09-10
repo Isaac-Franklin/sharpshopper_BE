@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_exempt
 from adminapp.models import ElectricityProviders
+from customeruserapp.paystackViews import confirmBalanceIsEnough, decreaseAccountBalance
 from onboardingapp.serializers import *
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
@@ -186,7 +187,7 @@ def PayElectricityBill(request):
             
             username = request.user.email.split('@')[0]
             request_id = generate_request_id(username)
-                    
+            
             headers = {
                 'api-key': 'b22d359ce9640011d09f4f6794439f05',
                 'secret-key': 'SK_6752c553bfbe0e720969d426fbc8970f379251eb76c',
@@ -205,7 +206,17 @@ def PayElectricityBill(request):
             
             print('data')
             print(data)
-            
+                
+            # check account balance is enough for transaction
+            checkAccountStatus = confirmBalanceIsEnough(request, amount)
+            if checkAccountStatus == 'Success':
+                pass
+            else:
+                return Response({
+                        "status": status.HTTP_400_BAD_REQUEST,
+                        'message': 'Insufficient account balance to manage this transaction'
+                    })
+                    
             try:
                 response = requests.post(url, json=data, headers=headers)
                 response.raise_for_status()
@@ -351,6 +362,14 @@ def PayElectricityBill(request):
                     
                     
                 if CustomerSetupResponse.get('code') == "000":
+                            
+                    # reduce amount from wallet
+                    decreaseAccountBalance(request, amount)
+                    
+                    # save notification
+                    NotificationActivity.objects.create(user = request.user, transactionEffect = 'Subtract', activityTtile = 'Electricity', deliveryStatus = 'Successfull', amountSpent = amount)
+                    # 
+                    
                     return Response({
                         "status": status.HTTP_200_OK,
                         "message": "Process completed successfully",

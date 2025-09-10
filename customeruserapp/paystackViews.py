@@ -180,7 +180,8 @@ def VerifyUserFundsDeposit(request, accesscode):
 def FetchUserAccountBalance(request):
     userEmail = request.user.email
     if UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).exists():
-        getUserBalance = UserAccountBalanceTracker.objects.get(emailAddress = userEmail).AccountBalance
+        getUser = UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).first()
+        getUserBalance = getUser.AccountBalance
         
         return Response({
                 "status": status.HTTP_200_OK,
@@ -201,7 +202,8 @@ def IncreaseAccountBalance(request, amount):
     userEmail = request.user.email
     amountToAdd = int(amount)
     if UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).exists():
-        getUserBalance = UserAccountBalanceTracker.objects.get(emailAddress = userEmail).AccountBalance
+        getUser = UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).first()
+        getUserBalance = getUser.AccountBalance
         updatedBalance = int((getUserBalance) + amountToAdd)
         
         # delete existing account balance model
@@ -221,14 +223,15 @@ def IncreaseAccountBalance(request, amount):
 
 def decreaseAccountBalance(request, amount):
     userEmail = request.user.email
-    amountToAdd = int(amount)
+    amountToReduce = int(amount)
     if UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).exists():
-        getUserBalance = UserAccountBalanceTracker.objects.get(emailAddress = userEmail).AccountBalance
+        getUser = UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).first()
+        getUserBalance = getUser.AccountBalance
         print('getUserBalance')
         print(getUserBalance)
-        print(amountToAdd)
-        print(int((getUserBalance) - amountToAdd))
-        updatedBalance = int((getUserBalance) - amountToAdd)
+        print(amountToReduce)
+        print(int((getUserBalance) - amountToReduce))
+        updatedBalance = int((getUserBalance) - amountToReduce)
         
         # delete existing account balance model
         UserAccountBalanceTracker.objects.all().delete()
@@ -241,6 +244,28 @@ def decreaseAccountBalance(request, amount):
         
     else:
         return 'Failed'
+        
+
+
+def confirmBalanceIsEnough(request, amount):
+    userEmail = request.user.email
+    amountToCheck = int(amount)
+    if UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).exists():
+        getUser = UserAccountBalanceTracker.objects.filter(emailAddress = userEmail).first()
+        getUserBalance = getUser.AccountBalance
+        print('getUserBalance')
+        print(getUserBalance)
+        print(amountToCheck)
+        print(int((getUserBalance) - amountToCheck))
+        updatedBalance = int((getUserBalance) - amountToCheck)
+        if updatedBalance >= 0:
+            return 'Success'
+        
+        else:
+            return 'Failed'
+    
+    else:
+        return 'No Balance'
         
     
 

@@ -14,6 +14,11 @@ PRODUCT_AVAILABILITY_STATUS = (
     ("Back Soon", "Back Soon"),
 )
 
+TRANSACTION_EFFECT = (
+    ("Add", "add"),
+    ("Subtract", "Subtract"),
+)
+
 
 Airtime_Network = (
     ("mtn", "MTN"),
@@ -321,6 +326,7 @@ class NotificationActivity(models.Model):
     activityTtile = models.CharField(max_length= 500, null=True, blank = True)
     deliveryStatus = models.CharField(max_length= 500, null=True, blank = True)
     amountSpent = models.CharField(max_length= 500, null=True, blank = True)
+    transactionEffect = models.CharField(choices = TRANSACTION_EFFECT, default = 'Add')
     # 
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(auto_now=True)

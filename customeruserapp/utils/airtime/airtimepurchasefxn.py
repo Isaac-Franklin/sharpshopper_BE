@@ -16,6 +16,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_exempt
+from customeruserapp.paystackViews import confirmBalanceIsEnough, decreaseAccountBalance
 from onboardingapp.serializers import *
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
@@ -83,20 +84,40 @@ def AirtimeVTUTopUpurchase(request):
                 'amount': amount,
                 'phone': phoneNumber
             }
-            
+                
+            # check account balance is enough for transaction
+            checkAccountStatus = confirmBalanceIsEnough(request, amount)
+            if checkAccountStatus == 'Success':
+                pass
+            else:
+                return Response({
+                        "status": status.HTTP_400_BAD_REQUEST,
+                        'message': 'Insufficient account balance to manage this transaction'
+                    })
+                
+        
             try:
                 response = requests.post(url, json=data, headers=headers)
                 response.raise_for_status()
                 CustomerSetupResponse = response.json()
-                
-                if "content" in CustomerSetupResponse:
-                    saveRechargeAction = RegisterAirtimePurchases(user = request.user, numberToRecharge = phoneNumber,  customeRequestID = requestID,transactionID = CustomerSetupResponse["content"]["transactions"]["transactionId"], transactionStatus = CustomerSetupResponse.get('response_description'), network = serviceID)
-                    saveRechargeAction.save()
-                else:
-                    print('DATA WAS NOT SAVED TO DB')
-                    
-                    
+
                 if CustomerSetupResponse.get('code') == "000":
+                    
+                    # 
+                    if "content" in CustomerSetupResponse:
+                        saveRechargeAction = RegisterAirtimePurchases(user = request.user, numberToRecharge = phoneNumber,  customeRequestID = requestID,transactionID = CustomerSetupResponse["content"]["transactions"]["transactionId"], transactionStatus = CustomerSetupResponse.get('response_description'), network = serviceID)
+                        saveRechargeAction.save()
+                            
+                        # reduce amount from wallet
+                        decreaseAccountBalance(request, amount)
+                        
+                        # save notification
+                        NotificationActivity.objects.create(user = request.user, transactionEffect = 'Subtract', activityTtile = 'Airtime', deliveryStatus = 'Successfull', amountSpent = amount)
+                        # 
+                        
+                    else:
+                        print('DATA WAS NOT SAVED TO DB')
+                        # 
                     return Response({
                         "status": status.HTTP_200_OK,
                         "message": "Process completed",
