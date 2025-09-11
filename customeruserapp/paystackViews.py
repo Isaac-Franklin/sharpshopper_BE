@@ -135,6 +135,9 @@ def VerifyUserFundsDeposit(request, accesscode):
                     saveSuccessTransaction = SuccessfullDeposites(user = getUserModel, accesscode = accesscode, PotentialDeposites = getSubscriptionModel)
                     saveSuccessTransaction.save()
                     
+                    # save notification
+                    NotificationActivity.objects.create(user = request.user, transactionEffect = 'Add', activityTtile = 'Funded', deliveryStatus = 'Successfull', amountSpent = amountToDeposite)
+                    
                     return Response({
                             "status": status.HTTP_200_OK,
                             'message': message,

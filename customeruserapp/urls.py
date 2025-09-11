@@ -18,6 +18,7 @@ urlpatterns = [
     path('fetchaddress', views.FetchUserAddresses, name="FetchUserAddresses"),
     path('getorders', views.FetchOrderLists, name="FetchOrderLists"),
     path('fetchorderlist', views.FetchAnOrderList, name="FetchAnOrderList"),
+    path('fetchhistory', views.FetchHistoryNotificaions, name="FetchHistoryNotificaions"),
     
     # DATA PURCHASE
     path('getdataplans', views.FetchAvailableDataPlans, name="FetchAvailableDataPlans"),

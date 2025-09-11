@@ -247,6 +247,7 @@ def SaveShoppinglist(request):
 
     # --- Step 3: Deduct balance ---
     decreaseAccountBalance(request, totalCostOfItems)
+    
     NotificationActivity.objects.create(user = request.user, transactionEffect = 'Subtract', activityTtile = 'Shopped', deliveryStatus = 'Successfull', amountSpent = totalCostOfItems)
 
     # --- Step 4: Now save shopping list items ---
@@ -886,4 +887,8 @@ def FetchAnOrderList(request):
                 })
 
 
+
+def FetchHistoryNotificaions(request):
+    if NotificationActivity.objects.filter(user = request).exists():
+        getHistory = NotificationActivity.objects.filter(user = request.user)
 

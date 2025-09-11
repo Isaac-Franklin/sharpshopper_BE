@@ -1,7 +1,7 @@
 import json
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils import timezone
 from adminapp.models import DataPlans
 from onboardingapp.models import ErrandUsers, ShopperUsers
 
@@ -15,7 +15,7 @@ PRODUCT_AVAILABILITY_STATUS = (
 )
 
 TRANSACTION_EFFECT = (
-    ("Add", "add"),
+    ("Add", "Add"),
     ("Subtract", "Subtract"),
 )
 
@@ -321,13 +321,20 @@ class AvailableUserDeliveryLocation(models.Model):
         
 
 
+def current_month():
+    return str(timezone.now().month)
+
 class NotificationActivity(models.Model):
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
-    activityTtile = models.CharField(max_length= 500, null=True, blank = True)
-    deliveryStatus = models.CharField(max_length= 500, null=True, blank = True)
-    amountSpent = models.CharField(max_length= 500, null=True, blank = True)
-    transactionEffect = models.CharField(choices = TRANSACTION_EFFECT, default = 'Add')
-    # 
+    activityTtile = models.CharField(max_length=500, null=True, blank=True)
+    deliveryStatus = models.CharField(max_length=500, null=True, blank=True)
+    amountSpent = models.CharField(max_length=500, null=True, blank=True)
+    transactionEffect = models.CharField(choices=TRANSACTION_EFFECT, default='Add')
+    month = models.CharField(
+        max_length=2,
+        default=current_month,
+    )
+    category = models.CharField(max_length=500, null=True, blank=True, default='all')
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(auto_now=True)
 
@@ -335,7 +342,4 @@ class NotificationActivity(models.Model):
         ordering = ['-edited_at', '-created_at']
         
     def __str__(self):
-        return f'Address: {self.activityTtile}.'
-    
-
-
+        return f'{self.activityTtile}.'

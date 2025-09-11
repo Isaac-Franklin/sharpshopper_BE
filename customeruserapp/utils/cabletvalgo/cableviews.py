@@ -212,7 +212,6 @@ def RenewCableTVService(request):
                         "status": status.HTTP_400_BAD_REQUEST,
                         'message': 'Insufficient account balance to manage this transaction'
                     })
-                    
             
             try:
                 cable_algo = CableTCSubscriptionAlgo(cabletvProvider)
