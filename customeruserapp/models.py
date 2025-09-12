@@ -324,6 +324,7 @@ class AvailableUserDeliveryLocation(models.Model):
 def current_month():
     return str(timezone.now().month)
 
+
 class NotificationActivity(models.Model):
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
     activityTtile = models.CharField(max_length=500, null=True, blank=True)

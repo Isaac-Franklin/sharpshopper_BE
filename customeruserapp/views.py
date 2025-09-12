@@ -878,8 +878,7 @@ def FetchAnOrderList(request):
                 'dataLength': len(orderList),
                 'message': 'Orders found'
             })
-                
-                
+
     else:
         return Response({
                 "status": status.HTTP_400_BAD_REQUEST,
@@ -888,7 +887,53 @@ def FetchAnOrderList(request):
 
 
 
+
+@swagger_auto_schema(
+    method='get',
+        tags=['customerApp'],
+    )
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def FetchHistoryNotificaions(request):
-    if NotificationActivity.objects.filter(user = request).exists():
+    if NotificationActivity.objects.filter(user = request.user).exists():
+        historyItems = []
         getHistory = NotificationActivity.objects.filter(user = request.user)
+        # historyItem = getHistory.first()
+        for historyItem in getHistory:
+        # 
+            title = historyItem.activityTtile
+            deliveryStatus = historyItem.deliveryStatus
+            amountSpent = historyItem.amountSpent
+            transactionEffect = historyItem.transactionEffect
+            category = historyItem.category
+            created_at = historyItem.created_at
+            month = historyItem.month
+
+            data = {
+                "title" : title,
+                "deliveryStatus" : deliveryStatus,
+                "amountSpent" : amountSpent,
+                "transactionEffect" : transactionEffect,
+                "created_at" : created_at,
+                "category" : category,
+                "month" : month,
+            }
+            
+            historyItems.append(data)
+        
+        return Response({
+                "status": status.HTTP_200_OK,
+                "data": historyItems,
+                'dataLength': len(historyItems),
+                'message': 'History found'
+            })
+        
+    else:
+        return Response({
+                "status": status.HTTP_200_OK,
+                "data": [],
+                'dataLength': 0,
+                'message': 'No data in history for now'
+            })
+
 
