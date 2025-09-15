@@ -1,7 +1,3 @@
-import csv
-import json
-import socket
-import concurrent.futures
 from smtplib import SMTPException
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +11,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_exempt
+from adminapp.dashboarddata import *
 from adminapp.serializer import *
 from customeruserapp.utils.bilasAuth import getBilasToken
 from customeruserapp.utils.datasub.dataPurchaseFxn import PurchaseData
@@ -33,6 +30,21 @@ from django.utils.crypto import get_random_string
 from customeruserapp.models import *
 from customeruserapp.serializers import *
 import ast
+from django.utils import timezone
+from django.db.models import Count
+import calendar
+from django.db.models import Sum
+from django.db.models.functions import ExtractWeek, ExtractWeekDay, ExtractMonth
+from datetime import date, timedelta
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from .models import ShopperUsers, ErrandUsers
+from .serializers import ShopperUserSerializer, ErrandUserSerializer, TransactionSerializer
+
+from django.utils.timesince import timesince
+from django.utils.timezone import now
 
 
 # Create your views here.
@@ -89,5 +101,339 @@ def AdminLogin(request):
                 # 'token': data.get("token"),
                 'message': 'An error occured'
             })
+        
+        
+
+@swagger_auto_schema(
+    method='get',
+        tags=['adminApp'],
+    )
+@api_view(['GET'])
+def DashboardStats(request):
+    allUsers = ShopperUsers.objects.filter()
+    data = []
+    allUsersCount = allUsers.count()
+    userRegistrationPercentage, userRegistrationTrend = get_monthly_user_stats()
+    userTrackDescription =  "Active users this month"
+    
+    activeUserData = {
+        'title': "Total Members",
+        'value': allUsersCount,
+        'change': userRegistrationPercentage,
+        'trend': userRegistrationTrend,
+        'description': userTrackDescription,
+    }
+    
+    data.append(activeUserData)
+    
+    # transaction amount and rate
+    percentage_change, trend, = get_monthly_spent_stats()
+    total_spent = NotificationActivity.objects.aggregate(total=Sum(Cast("amountSpent", FloatField())))["total"] or 0
+    
+    totalTransactionData = {
+        'title': "Total Transactions",
+        'value': total_spent,
+        'change': percentage_change,
+        'trend': trend,
+        'description': 'Total transactions this month',
+    }
+    
+    data.append(totalTransactionData)
+    
+    total_pending, percentage_change, trend = get_order_pending_stats()
+    
+    pendingDeliveryData = {
+        'title': "Pending Deliveries",
+        'value': total_pending,
+        'change': percentage_change,
+        'trend': trend,
+        'description': 'Track pending deliveries',
+    }
+    
+    data.append(pendingDeliveryData)
+    
+    total_utility_count, percentage_change, trend = get_utility_stats()
+    
+    utilityTransactionData = {
+        'title': "Utility Purchases",
+        'value': total_utility_count,
+        'change': percentage_change,
+        'trend': trend,
+        'description': 'Utility purchased over time',
+    }
+    
+    data.append(utilityTransactionData)
+    
+    return Response({
+            "status": status.HTTP_200_OK,
+            'data': data,
+            'message': 'Dashboard stats fetched successfully'
+        })
+    
 
 
+
+
+@swagger_auto_schema(
+    method='get',
+        tags=['adminApp'],
+    )
+@api_view(["GET"])
+def dashboard_analytics(request):
+    period = request.GET.get("period", "monthly").lower()
+    analytics = build_global_deposit_analytics()
+
+    # Return everything if period=all
+    if period == "all":
+        data = analytics
+    else:
+        # Safe lookup with default fallback to "monthly"
+        data = analytics.get(period, analytics["monthly"])
+
+    return Response({
+        "status": status.HTTP_200_OK,
+        "period": period,
+        "data": analytics,
+    })
+
+
+@swagger_auto_schema(
+    method='get',
+        tags=['adminApp'],
+    )
+@api_view(["GET"])
+def get_recent_activity(request):    
+    activities = NotificationActivity.objects.all()[:10]
+
+    data = [
+        {
+            "id": activity.id,
+            "user": activity.user.username if activity.user else None,
+            "action": activity.activityTtile,   # maps to "action" in frontend
+            "time": timesince(activity.created_at, now()) + " ago",  # relative time
+            "type": activity.category or "general",  # maps to "type" in frontend
+        }
+        for activity in activities
+    ]
+
+    return Response({
+        "status": status.HTTP_200_OK,
+        "data": data
+    })
+
+
+@swagger_auto_schema(
+    method='get',
+        tags=['adminApp'],
+    )
+@api_view(["GET"])
+def GetAllUsers(request):
+    shoppers = ShopperUsers.objects.select_related("user").all()
+
+    data = []
+    for shopper in shoppers:
+        # Find account balance (latest record if multiple)
+        balance_record = (
+            UserAccountBalanceTracker.objects.filter(user=shopper.user)
+            .order_by("-created_at")
+            .first()
+        )
+        account_balance = balance_record.AccountBalance if balance_record else 0
+
+        # Count total transactions from NotificationActivity
+        total_transactions = NotificationActivity.objects.filter(
+            user=shopper.user
+        ).count()
+
+        # Calculate last activity (if any)
+        last_activity = (
+            NotificationActivity.objects.filter(user=shopper.user)
+            .order_by("-created_at")
+            .first()
+        )
+        if last_activity:
+            from django.utils.timesince import timesince
+
+            last_activity_time = timesince(last_activity.created_at, now()) + " ago"
+        else:
+            last_activity_time = "N/A"
+
+        # Append formatted user data
+        data.append(
+            {
+                "id": shopper.id,
+                "name": shopper.fullname or shopper.user.username,
+                "email": shopper.emailAddress,
+                "phone": shopper.phoneNumber,
+                "accountBalance": account_balance,
+                "joinDate": shopper.created_at.strftime("%Y-%m-%d"),
+                "status": "active",  # You can extend if you have a status field
+                "totalTransactions": total_transactions,
+                "lastActivity": last_activity_time,
+            }
+        )
+
+    return Response(
+        {
+            "status": status.HTTP_200_OK,
+            "results": data,
+        }
+    )
+    
+
+
+@api_view(["GET"])
+def get_errand_users(request):
+    errand_users = ErrandUsers.objects.select_related("user").all()
+    data = []
+
+    for errand in errand_users:
+        # Get all orders for this errand user
+        assigned_orders = OrderStatusTracking.objects.filter(errandUser=errand)
+        total_assigned = assigned_orders.count()
+
+        # Delivered orders
+        delivered_orders = assigned_orders.filter(deliveryStatus="delivered").count()
+
+        # Success rate
+        success_rate = (
+            round((delivered_orders / total_assigned) * 100, 1)
+            if total_assigned > 0
+            else 0
+        )
+
+        # Last activity
+        last_order = assigned_orders.order_by("-created_at").first()
+        if last_order:
+            last_activity = timesince(last_order.created_at, now()) + " ago"
+        else:
+            last_activity = "N/A"
+
+        data.append(
+            {
+                "id": errand.id,
+                "name": errand.fullname or errand.user.username,
+                "email": errand.emailAddress,
+                "phone": errand.phonenumber,
+                "accountBalance": 0,  # (no model for now, can link if needed)
+                "joinDate": errand.created_at.strftime("%Y-%m-%d"),
+                "status": "active",  # static unless you have a field
+                "ordersAssigned": total_assigned,
+                "ordersDelivered": delivered_orders,
+                "successRate": success_rate,
+                "rating": 0.0,  # placeholder, no model provided
+                "lastActivity": last_activity,
+            }
+        )
+
+    return Response({"status": status.HTTP_200_OK, "results": data})
+
+
+
+@api_view(["GET"])
+def fetchAllAppUsers(request):
+    user_type = request.GET.get('user_type', 'normal')  # default = normal
+
+    if user_type == 'normal':
+        users = ShopperUsers.objects.all()
+        data = []
+        for u in users:
+            total_txn = NotificationActivity.objects.filter(user=u.user).count()
+            balance_obj = UserAccountBalanceTracker.objects.filter(user=u.user).last()
+            last_activity = NotificationActivity.objects.filter(user=u.user).order_by('-created_at').first()
+
+            data.append({
+                "id": u.id,
+                "name": u.fullname,
+                "email": u.emailAddress,
+                "phone": u.phoneNumber,
+                "accountBalance": balance_obj.AccountBalance if balance_obj else 0,
+                "joinDate": u.created_at.strftime("%Y-%m-%d"),
+                "status": "active",
+                "totalTransactions": total_txn,
+                "lastActivity": timesince(last_activity.created_at, now()) + " ago" if last_activity else "N/A",
+            })
+
+        return Response({"results": data}, status=status.HTTP_200_OK)
+
+    elif user_type == 'errand':
+        users = ErrandUsers.objects.all()
+        data = []
+        for u in users:
+            orders = OrderStatusTracking.objects.filter(errandUser=u)
+            total_assigned = orders.count()
+            delivered = orders.filter(deliveryStatus="delivered").count()
+            success_rate = round((delivered / total_assigned) * 100, 1) if total_assigned > 0 else 0
+            last_order = orders.order_by('-created_at').first()
+
+            data.append({
+                "id": u.id,
+                "name": u.fullname,
+                "email": u.emailAddress,
+                "phone": u.phonenumber,
+                "accountBalance": 0,  # adjust if you track balances for errands
+                "joinDate": u.created_at.strftime("%Y-%m-%d"),
+                "status": "active",
+                "ordersAssigned": total_assigned,
+                "ordersDelivered": delivered,
+                "successRate": success_rate,
+                "rating": 0.0,
+                "lastActivity": timesince(last_order.created_at, now()) + " ago" if last_order else "N/A",
+            })
+
+        return Response({"results": data}, status=status.HTTP_200_OK)
+
+    else:
+        return Response({
+            "error": "Invalid user_type. Must be 'normal' or 'errand'."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+@api_view(["GET"])
+def get_member(request, id):
+    user = get_object_or_404(ShopperUsers, pk=id)  # extend to check ErrandUsers if needed
+    serializer = ShopperUserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# 3. Create member
+@api_view(["POST"])
+def create_member(request):
+    serializer = ShopperUserSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 4. Update member
+@api_view(["PUT"])
+def update_member(request, id):
+    user = get_object_or_404(ShopperUsers, pk=id)
+    serializer = ShopperUserSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 5. Delete member
+@api_view(["DELETE"])
+def delete_member(request, id):
+    user = get_object_or_404(ShopperUsers, pk=id)
+    user.delete()
+    return Response({"message": "Member deleted"}, status=status.HTTP_204_NO_CONTENT)
+
+# 6. Member statistics
+@api_view(["GET"])
+def get_member_stats(request):
+    stats = {
+        "normal_users": ShopperUsers.objects.count(),
+        "errand_users": ErrandUsers.objects.count(),
+    }
+    return Response(stats, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+def get_all_transactions(request):
+    transactions = NotificationActivity.objects.all()
+    serializer = TransactionSerializer(transactions, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)

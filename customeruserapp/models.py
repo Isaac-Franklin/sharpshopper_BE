@@ -104,7 +104,8 @@ class OrderStatusTracking(models.Model):
     deliveryState = models.CharField(max_length= 300, null=True, blank = True)
     deliveryCountry = models.CharField(max_length= 300, null=True, blank = True)
     shoppingListID = models.CharField(max_length= 300, null=True, blank = True)
-    
+    # 
+    deliveryStatus = models.CharField(max_length= 300,choices = ITEM_DELIVERY_STATUS, default = 'in_store')
     # 
     deliveryTakeOffTime = models.DateTimeField(null=True, blank = True)
     actualPackageDeliveryDateTime = models.DateTimeField(null=True, blank = True)
@@ -125,7 +126,6 @@ class OrderStatusTracking(models.Model):
 
 class ErrandUserAssignTrackingModel(models.Model):
     assignederranderIDList = models.CharField(max_length= 700, null=True, blank = True)
-    
     # 
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(auto_now=True)
@@ -200,7 +200,6 @@ class ElectricityPurchaseRecordsModel(models.Model):
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
     MeterRecords = models.ForeignKey(UserMeterRecordsModel, null=True, on_delete=models.CASCADE)
     product_name = models.CharField(max_length= 3000, null=True, blank = True)
-    
     
     transactionId = models.CharField(max_length= 700, null=True, blank = True)
     requestId = models.CharField(max_length= 700, null=True, blank = True)
@@ -344,3 +343,7 @@ class NotificationActivity(models.Model):
         
     def __str__(self):
         return f'{self.activityTtile}.'
+    
+    
+    
+    

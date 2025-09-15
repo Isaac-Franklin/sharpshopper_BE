@@ -901,6 +901,7 @@ def FetchHistoryNotificaions(request):
         # historyItem = getHistory.first()
         for historyItem in getHistory:
         # 
+            historyItemID = historyItem.id
             title = historyItem.activityTtile
             deliveryStatus = historyItem.deliveryStatus
             amountSpent = historyItem.amountSpent
@@ -910,6 +911,7 @@ def FetchHistoryNotificaions(request):
             month = historyItem.month
 
             data = {
+                "historyItemID" : historyItemID,
                 "title" : title,
                 "deliveryStatus" : deliveryStatus,
                 "amountSpent" : amountSpent,
