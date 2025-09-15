@@ -255,70 +255,6 @@ from datetime import date, timedelta
 import calendar
 
 
-
-# def build_global_deposit_analytics():
-#     today = date.today()
-#     current_year = today.year
-
-#     # Query all successful deposits
-#     deposits = SuccessfullDeposites.objects.all()
-
-#     # --- DAILY (this week, grouped by weekday) ---
-#     start_of_week = today - timedelta(days=today.weekday())  # Monday
-#     week_deposits = (
-#         deposits.filter(created_at__date__gte=start_of_week)
-#         .annotate(weekday=ExtractWeekDay("created_at"))
-#         .values("weekday")
-#         .annotate(total=Sum("PotentialDeposites__amount"))
-#     )
-#     weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-#     daily = [
-#         {
-#             "name": weekdays[i - 1],
-#             "amount": next(
-#                 (float(item["total"]) for item in week_deposits if item["weekday"] == i),
-#                 0,
-#             ),
-#         }
-#         for i in range(1, 8)
-#     ]
-
-#     # --- WEEKLY (this month, grouped by week number) ---
-#     start_of_month = today.replace(day=1)
-#     weekly_deposits = (
-#         deposits.filter(created_at__date__gte=start_of_month)
-#         .annotate(week=ExtractWeek("created_at"))
-#         .values("week")
-#         .annotate(total=Sum("PotentialDeposites__amount"))
-#         .order_by("week")
-#     )
-#     weekly = [
-#         {"name": f"Week {idx}", "amount": float(entry["total"] or 0)}
-#         for idx, entry in enumerate(weekly_deposits, start=1)
-#     ]
-
-#     # --- MONTHLY (this year, grouped by month) ---
-#     monthly_deposits = (
-#         deposits.filter(created_at__year=current_year)
-#         .annotate(month=ExtractMonth("created_at"))
-#         .values("month")
-#         .annotate(total=Sum("PotentialDeposites__amount"))
-#         .order_by("month")
-#     )
-#     monthly = [
-#         {
-#             "name": calendar.month_abbr[i],
-#             "amount": next(
-#                 (float(item["total"]) for item in monthly_deposits if item["month"] == i),
-#                 0,
-#             ),
-#         }
-#         for i in range(1, 13)
-#     ]
-
-#     return {"daily": daily, "weekly": weekly, "monthly": monthly}
-
-
 def build_global_deposit_analytics():
     today = date.today()
     current_year = today.year
@@ -389,3 +325,30 @@ def build_global_deposit_analytics():
         "weekly": weekly,
         "monthly": monthly,
     }
+    
+    
+
+    UTILITY_KEYWORDS = ["Airtime", "Electricity", "Cable", "Data"]
+    # Get all activities that match utility keywords
+    activities = NotificationActivity.objects.filter(
+        activityTtile__iregex=r'(' + '|'.join(UTILITY_KEYWORDS) + ')'
+    ).order_by('-created_at')
+
+    purchases = []
+    for idx, act in enumerate(activities, start=1):
+        purchases.append({
+            "id": f"UTL{str(idx).zfill(3)}",  # UTL001, UTL002, ...
+            "customer": act.user.get_full_name() or act.user.username,
+            "utility": act.activityTtile.lower(),  # e.g. "electricity"
+            "provider": "Unknown Provider",  # you can enhance later
+            "amount": float(act.amountSpent or 0),
+            "units": f"{act.amountSpent} units" if act.amountSpent else "N/A",
+            "status": act.deliveryStatus.lower(),  # completed/pending/etc.
+            "date": act.created_at.isoformat(),
+            "reference": f"REF{act.id:06}",  # Unique reference
+        })
+
+    return Response({
+        "status": status.HTTP_200_OK,
+        "data": purchases,
+    })

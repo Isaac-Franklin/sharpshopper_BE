@@ -131,6 +131,7 @@ class TransactionSerializer(serializers.ModelSerializer):
     
     
     
-    
-    
-    
+class DataPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DataPlans
+        fields = "__all__"

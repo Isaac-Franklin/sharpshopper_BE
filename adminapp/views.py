@@ -81,10 +81,20 @@ def AdminLogin(request):
     if serializer.is_valid():
         email = serializer.validated_data['email']
         password = serializer.validated_data['password']
-        print('email')
-        print(email)
-        print(password)
-        
+
+        # Example: disallow specific email and password values
+        if email.lower() != "sharpshopperng@gmail.com":
+            return Response({
+                "status": 400,
+                "message": "This email is not allowed."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if password != "X9v!tR7@wQ2#kLm4":
+            return Response({
+                "status": 400,
+                "message": "This password is not allowed."
+            }, status=status.HTTP_400_BAD_REQUEST)
+                
         data = {
             email: email,
         }
@@ -152,7 +162,7 @@ def DashboardStats(request):
     
     data.append(pendingDeliveryData)
     
-    total_utility_count, percentage_change, trend = get_utility_stats()
+    total_utility_count, percentage_change, trend = get_utility_stats(request)
     
     utilityTransactionData = {
         'title': "Utility Purchases",
@@ -535,4 +545,210 @@ def GetAllAgentsForAgentAndOrderPage(request):
  
 
 
+
+@api_view(['GET'])
+def FetchUtilityPurchases(request):
+    UTILITY_KEYWORDS = ["Airtime", "Electricity", "Cable", "Data"]
+    # Get all activities that match utility keywords
+    activities = NotificationActivity.objects.filter(
+        activityTtile__iregex=r'(' + '|'.join(UTILITY_KEYWORDS) + ')'
+    ).order_by('-created_at')
+
+    purchases = []
+    for idx, act in enumerate(activities, start=1):
+        purchases.append({
+            "id": f"UTL{str(idx).zfill(3)}",  # UTL001, UTL002, ...
+            "customer": act.user.get_full_name() or act.user.username,
+            "utility": act.activityTtile.lower(),  # e.g. "electricity"
+            "provider": "Unknown Provider",  # you can enhance later
+            "amount": float(act.amountSpent or 0),
+            "units": f"{act.amountSpent} units" if act.amountSpent else "N/A",
+            "status": act.deliveryStatus.lower(),  # completed/pending/etc.
+            "date": act.created_at.isoformat(),
+            "reference": f"REF{act.id:06}",  # Unique reference
+        })
+    print('purchases')
+    print(purchases)
+    return Response({
+        "status": status.HTTP_200_OK,
+        "data": purchases,
+    })
+    
+    
+
+
+@api_view(['GET'])
+def get_utility_stats(request):
+    UTILITY_KEYWORDS = ["Airtime", "Electricity", "Cable", "Data"]
+    try:
+        # Filter only utility transactions
+        utilities = NotificationActivity.objects.filter(
+            activityTtile__iregex=r'(' + '|'.join(UTILITY_KEYWORDS) + ')'
+        )
+
+        total = utilities.count()
+        successful = utilities.filter(deliveryStatus__iexact="Success").count()
+        failed = utilities.filter(deliveryStatus__iexact="Failed").count()
+
+        return Response({
+            "status": 200,
+            "message": "Utility stats fetched successfully",
+            "data": {
+                "total": total,
+                "successful": successful,
+                "failed": failed
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({
+            "status": 400,
+            "message": "Failed to fetch utility stats",
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+
+
+# GET all data plans
+@api_view(['GET'])
+def get_data_plans(request):
+    try:
+        plans = DataPlans.objects.all()
+        result = []
+        for plan in plans:
+            result.append({
+                "id": plan.id,
+                "plan": plan.productName,
+                "provider": plan.network.network if plan.network else "Unknown",
+                "amount": float(plan.dataCost) if plan.dataCost else 0,
+                "description": f"{plan.dataPlanType} plan",
+                "validity": plan.dataValidity,
+                "status": "active",  # you can extend to have a status field
+                "createdAt": plan.created_at.isoformat(),
+            })
+        return Response({
+            "status": 200,
+            "message": "Data plans fetched successfully",
+            "data": result
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({
+            "status": 400,
+            "message": "Failed to fetch data plans",
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# CREATE a new data plan
+# CREATE a new data plan
+@api_view(['POST'])
+def create_data_plan(request):
+    try:
+        network_id = request.data.get("network")
+        network = NetworkID.objects.get(id=network_id) if network_id else None
+
+        plan = DataPlans.objects.create(
+            network=network,
+            productName=request.data.get("name"),
+            planID=request.data.get("planID", 0),
+            dataPlanType=request.data.get("description", "SME"),
+            dataCost=request.data.get("amount", "0"),
+            dataValidity=request.data.get("validity", "monthly"),
+        )
+        return Response({
+            "status": 200,
+            "message": "Data plan created successfully",
+            "data": {
+                "id": plan.id,
+                "plan": plan.productName,
+                "provider": plan.network.network if plan.network else "Unknown",
+                "amount": float(plan.dataCost),
+                "description": plan.dataPlanType,
+                "validity": plan.dataValidity,
+                "status": "active",
+                "createdAt": plan.created_at.isoformat(),
+            }
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({
+            "status": 400,
+            "message": "Failed to create data plan",
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# UPDATE an existing data plan
+@api_view(['PUT'])
+def update_data_plan(request, id):
+    try:
+        plan = DataPlans.objects.get(id=id)
+
+        if "name" in request.data:
+            plan.productName = request.data["name"]
+        if "amount" in request.data:
+            plan.dataCost = request.data["amount"]
+        if "description" in request.data:
+            plan.dataPlanType = request.data["description"]
+        if "validity" in request.data:
+            plan.dataValidity = request.data["validity"]
+        if "network" in request.data:
+            network_id = request.data.get("network")
+            plan.network = NetworkID.objects.get(id=network_id) if network_id else plan.network
+
+        plan.save()
+
+        return Response({
+            "status": 200,
+            "message": "Data plan updated successfully",
+            "data": {
+                "id": plan.id,
+                "plan": plan.productName,
+                "provider": plan.network.network if plan.network else "Unknown",
+                "amount": float(plan.dataCost),
+                "description": plan.dataPlanType,
+                "validity": plan.dataValidity,
+                "status": "active",
+                "createdAt": plan.created_at.isoformat(),
+            }
+        }, status=status.HTTP_200_OK)
+
+    except DataPlans.DoesNotExist:
+        return Response({
+            "status": 404,
+            "message": "Data plan not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            "status": 400,
+            "message": "Failed to update data plan",
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# DELETE a data plan
+@api_view(['DELETE'])
+def delete_data_plan(request, id):
+    try:
+        plan = DataPlans.objects.get(id=id)
+        plan.delete()
+        return Response({
+            "status": 200,
+            "message": "Data plan deleted successfully"
+        }, status=status.HTTP_200_OK)
+
+    except DataPlans.DoesNotExist:
+        return Response({
+            "status": 404,
+            "message": "Data plan not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            "status": 400,
+            "message": "Failed to delete data plan",
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        
 
