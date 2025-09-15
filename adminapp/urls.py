@@ -18,6 +18,10 @@ urlpatterns = [
     path("deletemember/<int:id>/", views.delete_member, name="delete_member"),
     path("members/stats/", views.get_member_stats, name="get_member_stats"),
     path('transactions/', views.get_all_transactions, name='transactions'),
+    path("transactions/stats/", views.get_transaction_stats, name="get_transaction_stats"),
+    path("orders/", views.GetOrderForAgentAdnOrderPage, name="GetOrderForAgentAdnOrderPage"),
+    path("agents/", views.GetAllAgentsForAgentAndOrderPage, name="GetAllAgentsForAgentAndOrderPage"),
+
 
 
     # path('fetchshoppingitems', views.FetchShoppingItems, name="FetchShoppingItems"),

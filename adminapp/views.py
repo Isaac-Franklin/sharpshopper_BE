@@ -437,3 +437,102 @@ def get_all_transactions(request):
     transactions = NotificationActivity.objects.all()
     serializer = TransactionSerializer(transactions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_transaction_stats(request):
+    # Calculate total amount (credits add, debits subtract)
+    total_amount = 0
+    transactions = NotificationActivity.objects.all()
+
+    for tx in transactions:
+        try:
+            amount = float(tx.amountSpent or 0)
+        except:
+            amount = 0
+        if tx.transactionEffect == "Add":
+            total_amount += amount
+        else:
+            total_amount += amount
+
+    completed_transactions = NotificationActivity.objects.filter(deliveryStatus="successful").count()
+    pending_transactions = NotificationActivity.objects.filter(deliveryStatus="failed").count()
+
+    return Response({
+        "total_amount": total_amount,
+        "completed_transactions": completed_transactions,
+        "pending_transactions": pending_transactions,
+    }, status=status.HTTP_200_OK)
+    
+    
+
+@api_view(['GET'])
+def GetOrderForAgentAdnOrderPage(request):
+    orders = OrderStatusTracking.objects.select_related("errandUser", "user").all()
+    order_data = []
+
+    for idx, order in enumerate(orders, start=1):
+        # Get customer (ShopperUser) linked to this order via ShoppingListModel
+        shopping = ShoppingListModel.objects.filter(shoppingListID=order.shoppingListID).first()
+        customer_name = shopping.itemRequester.fullname if shopping and shopping.itemRequester else "Unknown Customer"
+        items = [shopping.product.productName] if shopping and shopping.product else []
+
+        order_data.append({
+            "id": f"ORD{str(idx).zfill(3)}",
+            "customer": customer_name,
+            "agent": order.errandUser.fullname if order.errandUser else "Unassigned",
+            "status": order.deliveryStatus,
+            "priority": "high" if shopping and shopping.numberofitems > 5 else "medium" if shopping and shopping.numberofitems > 2 else "low",
+            "amount": float(shopping.productPriceAtPurchase or 0) * shopping.numberofitems if shopping else 0,
+            "address": shopping.deliveryLocation if shopping else None,
+            "createdAt": order.created_at,
+            "deliveredAt": order.actualPackageDeliveryDateTime,
+            "items": items,
+        })
+
+    return Response({
+        "data": order_data,
+    }, status=status.HTTP_200_OK)
+
+
+
+
+@api_view(['GET'])
+def GetAllAgentsForAgentAndOrderPage(request):
+    agents = ErrandUsers.objects.all()
+    agent_data = []
+
+    for agent in agents:
+        assigned_orders = OrderStatusTracking.objects.filter(errandUser=agent)
+        delivered_orders = assigned_orders.filter(deliveryStatus="delivered")
+
+        total_assigned = assigned_orders.count()
+        total_delivered = delivered_orders.count()
+        success_rate = (total_delivered / total_assigned * 100) if total_assigned > 0 else 0
+
+        agent_data.append({
+            "id": agent.id,
+            "name": agent.fullname,
+            "email": agent.emailAddress,
+            "phone": agent.phonenumber,
+            "status": "active" if total_assigned > 0 else "inactive",
+            "rating": 4.5,  # placeholder unless you have ratings
+            "ordersAssigned": total_assigned,
+            "ordersDelivered": total_delivered,
+            "successRate": round(success_rate, 1),
+            "currentOrders": assigned_orders.filter(deliveryStatus__in=["in-progress", "in_store"]).count(),
+            "location": agent.user.username if agent.user else "Unknown Area",  # adjust if location exists
+        })
+
+    
+
+    return Response({
+        "data": agent_data,
+    }, status=status.HTTP_200_OK)
+
+
+
+ 
+
+
+

@@ -42,6 +42,12 @@ DATA_SUSBCRIPTION_STATUS = (
     ("delivered", "Delivered"),
     ("failed", "Failed"),
 )
+
+TRANSACTION_STATUS = (
+    ("successful", "successful"),
+    ("pending", "Pending"),
+    ("failed", "Failed"),
+)
 class ProductCategories(models.Model):
     categoryName = models.CharField(max_length= 300, null=True, blank = True)
     categoryImage = models.ImageField(upload_to='categoryimages/', blank=True, null=True)
@@ -327,7 +333,7 @@ def current_month():
 class NotificationActivity(models.Model):
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
     activityTtile = models.CharField(max_length=500, null=True, blank=True)
-    deliveryStatus = models.CharField(max_length=500, null=True, blank=True)
+    deliveryStatus = models.CharField(choices=TRANSACTION_STATUS, default='Pending')
     amountSpent = models.CharField(max_length=500, null=True, blank=True)
     transactionEffect = models.CharField(choices=TRANSACTION_EFFECT, default='Add')
     month = models.CharField(
