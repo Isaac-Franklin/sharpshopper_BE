@@ -48,23 +48,23 @@ from django.utils.timezone import now
 
 
 # Create your views here.
-@swagger_auto_schema(
-    method='post',
-        request_body= CreateDataPlansSerializer,
-        tags=['adminApp'],
-    )
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def CreateDataPlan(request):
-    serializer = CreateDataPlansSerializer(data = request.data)
-    if serializer.is_valid():
-        serializer.save()
+# @swagger_auto_schema(
+#     method='post',
+#         request_body= CreateDataPlansSerializer,
+#         tags=['AdminApp'],
+#     )
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def CreateDataPlan(request):
+#     serializer = CreateDataPlansSerializer(data = request.data)
+#     if serializer.is_valid():
+#         serializer.save()
         
-    return Response({
-            "status": status.HTTP_200_OK,
-            # 'token': data.get("token"),
-            'message': 'Request completed successfully'
-        })
+#     return Response({
+#             "status": status.HTTP_200_OK,
+#             # 'token': data.get("token"),
+#             'message': 'Request completed successfully'
+        # })
 
 
 
@@ -72,8 +72,9 @@ def CreateDataPlan(request):
 @swagger_auto_schema(
     method='post',
         request_body= AdminLoginSerializer,
-        tags=['adminApp'],
+        tags=['AdminApp'],
     )
+@csrf_exempt
 @api_view(['POST'])
 def AdminLogin(request):
     serializer = AdminLoginSerializer(data = request.data)
@@ -116,7 +117,7 @@ def AdminLogin(request):
 
 @swagger_auto_schema(
     method='get',
-        tags=['adminApp'],
+        tags=['AdminApp'],
     )
 @api_view(['GET'])
 def DashboardStats(request):
@@ -186,7 +187,7 @@ def DashboardStats(request):
 
 @swagger_auto_schema(
     method='get',
-        tags=['adminApp'],
+        tags=['AdminApp'],
     )
 @api_view(["GET"])
 def dashboard_analytics(request):
@@ -209,7 +210,7 @@ def dashboard_analytics(request):
 
 @swagger_auto_schema(
     method='get',
-        tags=['adminApp'],
+        tags=['AdminApp'],
     )
 @api_view(["GET"])
 def get_recent_activity(request):    
@@ -234,7 +235,7 @@ def get_recent_activity(request):
 
 @swagger_auto_schema(
     method='get',
-        tags=['adminApp'],
+        tags=['AdminApp'],
     )
 @api_view(["GET"])
 def GetAllUsers(request):
@@ -291,7 +292,7 @@ def GetAllUsers(request):
     )
     
 
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(["GET"])
 def get_errand_users(request):
     errand_users = ErrandUsers.objects.select_related("user").all()
@@ -339,7 +340,7 @@ def get_errand_users(request):
     return Response({"status": status.HTTP_200_OK, "results": data})
 
 
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(["GET"])
 def fetchAllAppUsers(request):
     user_type = request.GET.get('user_type', 'normal')  # default = normal
@@ -399,6 +400,7 @@ def fetchAllAppUsers(request):
         }, status=status.HTTP_400_BAD_REQUEST)
     
     
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(["GET"])
 def get_member(request, id):
     user = get_object_or_404(ShopperUsers, pk=id)  # extend to check ErrandUsers if needed
@@ -406,6 +408,7 @@ def get_member(request, id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # 3. Create member
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'POST'])
 @api_view(["POST"])
 def create_member(request):
     serializer = ShopperUserSerializer(data=request.data)
@@ -415,6 +418,7 @@ def create_member(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # 4. Update member
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'PUT'])
 @api_view(["PUT"])
 def update_member(request, id):
     user = get_object_or_404(ShopperUsers, pk=id)
@@ -425,6 +429,7 @@ def update_member(request, id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # 5. Delete member
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'DELETE'])
 @api_view(["DELETE"])
 def delete_member(request, id):
     user = get_object_or_404(ShopperUsers, pk=id)
@@ -432,6 +437,7 @@ def delete_member(request, id):
     return Response({"message": "Member deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 # 6. Member statistics
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(["GET"])
 def get_member_stats(request):
     stats = {
@@ -441,7 +447,7 @@ def get_member_stats(request):
     return Response(stats, status=status.HTTP_200_OK)
 
 
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
 def get_all_transactions(request):
     transactions = NotificationActivity.objects.all()
@@ -449,6 +455,7 @@ def get_all_transactions(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
 def get_transaction_stats(request):
     # Calculate total amount (credits add, debits subtract)
@@ -475,7 +482,7 @@ def get_transaction_stats(request):
     }, status=status.HTTP_200_OK)
     
     
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
 def GetOrderForAgentAdnOrderPage(request):
     orders = OrderStatusTracking.objects.select_related("errandUser", "user").all()
@@ -506,7 +513,7 @@ def GetOrderForAgentAdnOrderPage(request):
 
 
 
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
 def GetAllAgentsForAgentAndOrderPage(request):
     agents = ErrandUsers.objects.all()
@@ -545,7 +552,7 @@ def GetAllAgentsForAgentAndOrderPage(request):
  
 
 
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
 def FetchUtilityPurchases(request):
     UTILITY_KEYWORDS = ["Airtime", "Electricity", "Cable", "Data"]
@@ -576,7 +583,7 @@ def FetchUtilityPurchases(request):
     
     
 
-
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
 def get_utility_stats(request):
     UTILITY_KEYWORDS = ["Airtime", "Electricity", "Cable", "Data"]
@@ -611,6 +618,8 @@ def get_utility_stats(request):
 
 
 # GET all data plans
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
+
 @api_view(['GET'])
 def get_data_plans(request):
     try:
@@ -641,7 +650,11 @@ def get_data_plans(request):
 
 
 # CREATE a new data plan
-# CREATE a new data plan
+@swagger_auto_schema(
+    method='post',
+        request_body= CreateDataPlansSerializer,
+        tags=['AdminApp'],
+    )
 @api_view(['POST'])
 def create_data_plan(request):
     try:
@@ -679,6 +692,7 @@ def create_data_plan(request):
 
 
 # UPDATE an existing data plan
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'PUT'])
 @api_view(['PUT'])
 def update_data_plan(request, id):
     try:
@@ -727,6 +741,10 @@ def update_data_plan(request, id):
 
 
 # DELETE a data plan
+@swagger_auto_schema(
+    method='delete',
+        tags=['AdminApp'],
+    )
 @api_view(['DELETE'])
 def delete_data_plan(request, id):
     try:

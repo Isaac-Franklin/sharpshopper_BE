@@ -14,6 +14,7 @@ from customeruserapp.models import ErrandUserAssignTrackingModel, ShoppingListMo
 from onboardingapp.models import ErrandUsers
 from collections import defaultdict
 
+from shopperuserapp.models import ErrandUserAccountBalanceTracker
 from shopperuserapp.serializer import ShoppingListSerializer
 
 
@@ -153,8 +154,41 @@ def FetchShoppingItems(request):
         },
     )
     
+    
+    
+
+
+@swagger_auto_schema(
+    method='get',
+        tags=['shopperApp'],
+    )
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  
+def ErrandUserAccountBalance(request):
+    if ErrandUserAccountBalanceTracker.objects.filter(user=request.user).exists():
+        getUser = ErrandUserAccountBalanceTracker.objects.filter(user=request.user).first()
+        accountBalance = getUser.AccountBalance
         
-        
+        # userData = {
+        #     'accountBalance': accountBalance
+        # }
+            
+        return Response({
+                "status": status.HTTP_200_OK,
+                'message': 'Account balance found successfully',
+                'balance': accountBalance
+            })
+            
+    else:
+        return Response({
+                "status": status.HTTP_200_OK,
+                'message': 'Account balance not found.',
+                'balance': 0.00
+            })
+
+
+
+
 
 
 

@@ -4,7 +4,7 @@ from customeruserapp.utils.datasub import datapurchaseviews
 from . import views
 
 urlpatterns = [
-    path('createdataplan', views.CreateDataPlan, name="CreateDataNetwork"),
+    # path('createdataplan', views.CreateDataPlan, name="CreateDataNetwork"),
     path('login', views.AdminLogin, name="AdminLogin"),
     path('dashboardstats', views.DashboardStats, name="DashboardStats"),
     path("dashboard/analytics/", views.dashboard_analytics, name="dashboard_analytics"),

@@ -35,7 +35,7 @@ urlpatterns = [
     path('onboard/', include("onboardingapp.urls")),
     path('customeruser/', include("customeruserapp.urls")),
     path('errand/', include("shopperuserapp.urls")),
-    path('admin/', include("adminapp.urls")),
+    path('adminapp/', include("adminapp.urls")),
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     # jwt endpoints
