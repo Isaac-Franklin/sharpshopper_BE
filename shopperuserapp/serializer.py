@@ -17,8 +17,20 @@ class ShoppingListSerializer(serializers.ModelSerializer):
             'requester_image',
             'productPriceAtPurchase',
             'numberofitems',
+            'deliveryLocation',
             'deliveryStatus',
             'created_at',
             'edited_at'
         ]
         
+
+class FetchShoppingListsSerializer(serializers.Serializer):
+    filter = serializers.CharField()
+
+class MarkAsDeliveredSerializer(serializers.Serializer):
+    shoppingListID = serializers.CharField()
+
+class UpdateShoppingListDeliveredSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShoppingListModel
+        fields = ['deliveryStatus',]
