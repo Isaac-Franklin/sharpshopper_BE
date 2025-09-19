@@ -25,9 +25,16 @@ urlpatterns = [
     path("utilities/stats/", views.get_utility_stats, name="get_utility_stats"),
     # 
     path("utilitiesdataplans/", views.get_data_plans, name="get_data_plans"),
-    path("createdataplans/", views.create_data_plan, name="create_data_plan"),
     path("updatedataplans/<int:id>/", views.update_data_plan, name="update_data_plan"),
     path("deletedataplans/<int:id>/", views.delete_data_plan, name="delete_data_plan"),
+    path("createagents/", views.RegisterAgent, name="RegisterAgent"),
+    # path("editagents/", views.EditAgentProfile, name="EditAgentProfile"),
+    
+    # category and products
+    path("getcategories/", views.FetchCategories, name="FetchCategories"),
+    path("getproducts/", views.FetchProducts, name="FetchProducts"),
+    path("editproduct/<int:id>/", views.editProductDetails, name="editProductDetails"),
+    
 
 
 

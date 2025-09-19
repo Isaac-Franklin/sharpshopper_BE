@@ -48,6 +48,9 @@ TRANSACTION_STATUS = (
     ("pending", "Pending"),
     ("failed", "Failed"),
 )
+
+
+
 class ProductCategories(models.Model):
     categoryName = models.CharField(max_length= 300, null=True, blank = True)
     categoryImage = models.ImageField(upload_to='categoryimages/', blank=True, null=True)

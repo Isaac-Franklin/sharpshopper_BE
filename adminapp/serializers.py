@@ -1,6 +1,18 @@
 from rest_framework import serializers
 from customeruserapp.models import *
 
+class CreateDataPlansSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DataPlans
+        fields = ['network', 'productName', 'dataPlanType', 'dataCost', 'dataValidity']
+
+
+
+class AdminLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+
 
 class ShopperUserSerializer(serializers.ModelSerializer):
     # Custom fields
@@ -135,3 +147,23 @@ class DataPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataPlans
         fields = "__all__"
+        
+        
+from rest_framework import serializers
+
+class RegisterErrandUserSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=True)
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(required=True)
+    location = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    image = serializers.ImageField(required=False) 
+
+
+
+
+class editProductItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Products
+        fields = ['productName', 'productPrice', 'productImage']
+

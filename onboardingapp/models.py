@@ -34,6 +34,7 @@ class ErrandUsers(models.Model):
     fullname = models.CharField(max_length= 300, null=True, blank = True)
     emailAddress = models.EmailField(max_length= 300, null=True, blank = True)
     phonenumber = models.CharField(max_length= 300, null=True, blank = True)
+    location = models.CharField(max_length= 300, null=True, blank = True)
     password = models.CharField(max_length= 300, null=True, blank = True)
     profileImage = models.ImageField(upload_to='errandUserProfileImages/', blank=True, null=True)
 

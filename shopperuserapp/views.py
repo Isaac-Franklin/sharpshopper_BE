@@ -85,8 +85,6 @@ def generate_unique_code(prefix="CODE"):
     
 
 
-
-
 @swagger_auto_schema(
     method='get',
     query_serializer=FetchShoppingListsSerializer,

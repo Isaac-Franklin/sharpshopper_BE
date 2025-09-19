@@ -41,8 +41,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import ShopperUsers, ErrandUsers
-from .serializers import ShopperUserSerializer, ErrandUserSerializer, TransactionSerializer
-
+from .serializers import *
 from django.utils.timesince import timesince
 from django.utils.timezone import now
 
@@ -334,6 +333,7 @@ def get_errand_users(request):
                 "successRate": success_rate,
                 "rating": 0.0,  # placeholder, no model provided
                 "lastActivity": last_activity,
+                "profileImage": errand.profileImage.url,
             }
         )
 
@@ -526,6 +526,11 @@ def GetAllAgentsForAgentAndOrderPage(request):
         total_assigned = assigned_orders.count()
         total_delivered = delivered_orders.count()
         success_rate = (total_delivered / total_assigned * 100) if total_assigned > 0 else 0
+        
+        if agent.profileImage :
+            image = image = request.build_absolute_uri(agent.profileImage.url)
+        else:
+            image = ''
 
         agent_data.append({
             "id": agent.id,
@@ -537,6 +542,7 @@ def GetAllAgentsForAgentAndOrderPage(request):
             "ordersAssigned": total_assigned,
             "ordersDelivered": total_delivered,
             "successRate": round(success_rate, 1),
+            "profileImage": image,
             "currentOrders": assigned_orders.filter(deliveryStatus__in=["in-progress", "in_store"]).count(),
             "location": agent.user.username if agent.user else "Unknown Area",  # adjust if location exists
         })
@@ -755,11 +761,11 @@ def delete_data_plan(request, id):
             "message": "Data plan deleted successfully"
         }, status=status.HTTP_200_OK)
 
-    except DataPlans.DoesNotExist:
-        return Response({
-            "status": 404,
-            "message": "Data plan not found"
-        }, status=status.HTTP_404_NOT_FOUND)
+    # except DataPlans.DoesNotExist:
+    #     return Response({
+    #         "status": 404,
+    #         "message": "Data plan not found"
+    #     }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             "status": 400,
@@ -767,6 +773,181 @@ def delete_data_plan(request, id):
             "error": str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
         
+
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser
+@swagger_auto_schema(
+    method='POST',
+        tags=['AdminApp'],
+    )
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # allows image uploads
+def RegisterAgent(request):
+    serializer = RegisterErrandUserSerializer(data = request.data)
+    if serializer.is_valid():
+        print('request.data')
+        print(request.data)
+        data = serializer.validated_data
+
+        name = data.get('name')
+        phone = data.get('phone')
+        email = data.get('email')
+        location = data.get('location')
+        password = data.get('password')
+        image = data.get('image')
+            
+        # create user
+        createUser = User.objects.create_user(
+            username=email,
+            email=email, first_name=name, last_name=phone, password=password)
+        createUser.save()
         
+        # create user model 
+        password = make_password(password)
+        ErrandUsers.objects.create(user=createUser, fullname=name, emailAddress=email, phonenumber=phone, location=location, password=password, profileImage=image)
+        
+        return Response({
+            "status": 200,
+            "message": "Errand user created successfully",
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 
+
+
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
+@api_view(['GET'])
+def FetchCategories(request):
+    items = ProductCategories.objects.all()
+    items_data = []
+
+    for item in items:
+        categoryProducts = Products.objects.filter(productCategory=item)
+        # delivered_orders = categoryProducts.filter(deliveryStatus="delivered")
+
+        total_products_in_category = categoryProducts.count()
+        # total_delivered = delivered_orders.count()
+        # success_rate = (total_delivered / total_assigned * 100) if total_assigned > 0 else 0
+        
+        if item.categoryImage :
+            image = image = request.build_absolute_uri(item.categoryImage.url)
+        else:
+            image = ''
+
+        items_data.append({
+            "id": item.id,
+            "name": item.categoryName,
+            "totalProductInCategory": total_products_in_category,
+            "profileImage": image,
+        })
+    return Response({
+        "data": items_data,
+    }, status=status.HTTP_200_OK)
+
+
+
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
+@api_view(['GET'])
+def FetchProducts(request):
+    items = Products.objects.all()
+    items_data = []
+
+    for item in items:
+        categoryProducts = ShoppingListModel.objects.filter(product=item)
+        categoryName = item.productCategory.categoryName
+        cartCount = categoryProducts.count()
+        # delivered_orders = categoryProducts.filter(deliveryStatus="delivered")
+
+        # total_products_in_category = categoryProducts.count()
+        # total_delivered = delivered_orders.count()
+        # success_rate = (total_delivered / total_assigned * 100) if total_assigned > 0 else 0
+        
+        if item.productImage :
+            image = image = request.build_absolute_uri(item.productImage.url)
+        else:
+            image = ''
+
+        items_data.append({
+            "id": item.id,
+            "name": item.productName,
+            "categoryName": categoryName,
+            "cartCount": cartCount,
+            "price": item.productPrice,
+            "profileImage": image,
+        })
+    return Response({
+        "data": items_data,
+    }, status=status.HTTP_200_OK)
+
+
+
+@swagger_auto_schema(tags=['AdminApp'], methods=[ 'PUT'], request_body=editProductItemSerializer)
+@api_view(['PUT'])
+def editProductDetails(request, id):
+    print('editProductDetails CALLED')
+    print(request.data)
+    productToEdit = Products.objects.get(id = id)
+    originalProductName = productToEdit.productName
+    originalProductPrice = productToEdit.productPrice
+    originalProductImage = productToEdit.productImage
+    serializer = editProductItemSerializer(data = request.data)
+    if serializer.is_valid():
+        productName = serializer.data['productName']
+        productPrice = serializer.data['productPrice']
+        productImage = serializer.data['productImage']
+        
+        print('productName')
+        print(productName)
+        print(productPrice)
+        print(productImage)
+        
+        if serializer.data['productName'] == '' or serializer.data['productName'] is None:
+            productName = originalProductName
+        else:
+            productName = serializer.data['productName']
+        
+
+        def safe_get(data, field, original_value):
+            value = data.get(field)
+            if value in [None, '', 'None']:
+                return original_value
+            return value
+
+        productName = safe_get(serializer.data, 'productName', originalProductName)
+        productPrice = safe_get(serializer.data, 'productPrice', originalProductPrice)
+        productImage = safe_get(serializer.data, 'productImage', originalProductImage)
+
+        # 
+        
+        # updateProduct = {'productName': productName, 'productPrice': productPrice, 'productImage': productImage}
+        print('updateProduct')
+        # print(updateProduct)
+        udpateSerializer = editProductItemSerializer(productToEdit, data = request.data, partial=True)
+        if udpateSerializer.is_valid():
+            print('udpateSerializer.is_valid()')
+            udpateSerializer.save()
+            
+            return Response({
+                "message": 'Product updated successfully',
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        
+        else: 
+            return Response({
+                "message": 'An error occured with the details you entered',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # 
+        
+    else: 
+        return Response({
+            "message": 'An error occured with the details you entered',
+        }, status=status.HTTP_400_BAD_REQUEST)
+    # 
+    
+    
+    
+    
+    
+    
+    
