@@ -60,8 +60,8 @@ class ProductCategories(models.Model):
     class Meta:
         ordering = ['-edited_at', '-created_at']
         
-    def __str__(self):
-        return self.categoryName
+    # def __str__(self):
+    #     return self.categoryName
 
 
 class Products(models.Model):

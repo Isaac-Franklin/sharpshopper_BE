@@ -142,7 +142,7 @@ def DashboardStats(request):
     
     totalTransactionData = {
         'title': "Total Transactions",
-        'value': total_spent,
+        'value': f'₦ {total_spent:,.2f}',
         'change': percentage_change,
         'trend': trend,
         'description': 'Total transactions this month',
@@ -162,7 +162,7 @@ def DashboardStats(request):
     
     data.append(pendingDeliveryData)
     
-    total_utility_count, percentage_change, trend = get_utility_stats(request)
+    total_utility_count, percentage_change, trend = get_utility_stats()
     
     utilityTransactionData = {
         'title': "Utility Purchases",
@@ -591,7 +591,7 @@ def FetchUtilityPurchases(request):
 
 @swagger_auto_schema(tags=['AdminApp'], methods=[ 'GET'])
 @api_view(['GET'])
-def get_utility_stats(request):
+def get_utility_stats_main(request):
     UTILITY_KEYWORDS = ["Airtime", "Electricity", "Cable", "Data"]
     try:
         # Filter only utility transactions
@@ -873,6 +873,7 @@ def FetchProducts(request):
             "categoryName": categoryName,
             "cartCount": cartCount,
             "price": item.productPrice,
+            "availability": item.productAvailability,
             "profileImage": image,
         })
     return Response({
@@ -884,38 +885,36 @@ def FetchProducts(request):
 @swagger_auto_schema(tags=['AdminApp'], methods=[ 'PUT'], request_body=editProductItemSerializer)
 @api_view(['PUT'])
 def editProductDetails(request, id):
-    print('editProductDetails CALLED')
-    print(request.data)
     productToEdit = Products.objects.get(id = id)
     originalProductName = productToEdit.productName
     originalProductPrice = productToEdit.productPrice
     originalProductImage = productToEdit.productImage
     serializer = editProductItemSerializer(data = request.data)
     if serializer.is_valid():
-        productName = serializer.data['productName']
-        productPrice = serializer.data['productPrice']
-        productImage = serializer.data['productImage']
+        # productName = serializer.data['productName']
+        # productPrice = serializer.data['productPrice']
+        # productImage = serializer.data['productImage']
         
-        print('productName')
-        print(productName)
-        print(productPrice)
-        print(productImage)
+        # # print('productName')
+        # # print(productName)
+        # # print(productPrice)
+        # # print(productImage)
         
-        if serializer.data['productName'] == '' or serializer.data['productName'] is None:
-            productName = originalProductName
-        else:
-            productName = serializer.data['productName']
+        # if serializer.data['productName'] == '' or serializer.data['productName'] is None:
+        #     productName = originalProductName
+        # else:
+        #     productName = serializer.data['productName']
         
 
-        def safe_get(data, field, original_value):
-            value = data.get(field)
-            if value in [None, '', 'None']:
-                return original_value
-            return value
+        # def safe_get(data, field, original_value):
+        #     value = data.get(field)
+        #     if value in [None, '', 'None']:
+        #         return original_value
+        #     return value
 
-        productName = safe_get(serializer.data, 'productName', originalProductName)
-        productPrice = safe_get(serializer.data, 'productPrice', originalProductPrice)
-        productImage = safe_get(serializer.data, 'productImage', originalProductImage)
+        # productName = safe_get(serializer.data, 'productName', originalProductName)
+        # productPrice = safe_get(serializer.data, 'productPrice', originalProductPrice)
+        # productImage = safe_get(serializer.data, 'productImage', originalProductImage)
 
         # 
         
@@ -924,7 +923,6 @@ def editProductDetails(request, id):
         # print(updateProduct)
         udpateSerializer = editProductItemSerializer(productToEdit, data = request.data, partial=True)
         if udpateSerializer.is_valid():
-            print('udpateSerializer.is_valid()')
             udpateSerializer.save()
             
             return Response({
@@ -947,7 +945,81 @@ def editProductDetails(request, id):
     
     
     
+
+@swagger_auto_schema(
+    tags=['AdminApp'],
+    method='post',
+    request_body=createCategorySerializer,
+    # responses={201: "Category created successfully", 400: "Bad request"}
+)
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])  # optional: remove if not needed
+def CreateCategory(request):
+    serializer = createCategorySerializer(data=request.data)
+    if serializer.is_valid():
+        name = serializer.validated_data.get('categoryName')
+        image = serializer.validated_data.get('categoryImage')
+        if not name or not image:
+            return Response(
+                {"success": False, "message": "Category name and image are required", 
+                 "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        else:
+            serializer.save()
+            return Response(
+                {"success": True, "message": "Category created successfully", "data": serializer.data},
+                status=status.HTTP_201_CREATED
+        )
+    else:
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    # return Response(
+    #     {"success": False, "errors": serializer.errors},
+    #     status=status.HTTP_400_BAD_REQUEST
+    # )
     
-    
-    
-    
+
+
+@swagger_auto_schema(
+    tags=['AdminApp'],
+    method='post',
+    request_body=CreateProductSerializer,
+    responses={201: "Product created successfully", 400: "Bad request"}
+)
+@api_view(['POST'])
+def CreateProduct(request):
+    print('CreateProduct CALLED')
+    print(request.data)
+    serializer = CreateProductSerializer(data=request.data)
+
+    if serializer.is_valid():
+        name = serializer.validated_data.get('productName')
+        image = serializer.validated_data.get('productImage')
+        productPrice = serializer.validated_data.get('productPrice')
+        productCategory = serializer.validated_data.get('productCategory')
+        productAvailability = serializer.validated_data.get('productAvailability')
+        if not name or not image or not productPrice or not productCategory or not productAvailability:
+            return Response(
+                {"success": False, "message": "All fields are required", 
+                 "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        else:
+            serializer.save()
+            return Response(
+                {"success": True, "message": "Category created successfully", "data": serializer.data},
+                status=status.HTTP_201_CREATED
+        )
+    else:
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+
+

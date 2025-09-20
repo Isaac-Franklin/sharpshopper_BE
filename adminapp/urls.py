@@ -22,7 +22,7 @@ urlpatterns = [
     path("orders/", views.GetOrderForAgentAdnOrderPage, name="GetOrderForAgentAdnOrderPage"),
     path("agents/", views.GetAllAgentsForAgentAndOrderPage, name="GetAllAgentsForAgentAndOrderPage"),
     path("fetchutilities/", views.FetchUtilityPurchases, name="FetchUtilityPurchases"),
-    path("utilities/stats/", views.get_utility_stats, name="get_utility_stats"),
+    path("utilities/stats/", views.get_utility_stats_main, name="get_utility_stats_main"),
     # 
     path("utilitiesdataplans/", views.get_data_plans, name="get_data_plans"),
     path("updatedataplans/<int:id>/", views.update_data_plan, name="update_data_plan"),
@@ -34,6 +34,8 @@ urlpatterns = [
     path("getcategories/", views.FetchCategories, name="FetchCategories"),
     path("getproducts/", views.FetchProducts, name="FetchProducts"),
     path("editproduct/<int:id>/", views.editProductDetails, name="editProductDetails"),
+    path("createcategory/", views.CreateCategory, name="CreateCategory"),
+    path("createproduct/", views.CreateProduct, name="CreateProduct"),
     
 
 

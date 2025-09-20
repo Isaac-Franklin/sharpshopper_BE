@@ -165,5 +165,24 @@ class RegisterErrandUserSerializer(serializers.Serializer):
 class editProductItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Products
-        fields = ['productName', 'productPrice', 'productImage']
+        fields = ['productName', 'productPrice', 'productImage', 'productAvailability']
 
+
+class createCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductCategories
+        fields = ['categoryName', 'categoryImage']
+
+
+
+
+class CreateProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Products
+        fields = [
+            "productCategory",
+            "productName",
+            "productPrice",
+            "productAvailability",
+            "productImage",
+        ]
