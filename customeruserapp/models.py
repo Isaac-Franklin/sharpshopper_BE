@@ -118,8 +118,8 @@ class OrderStatusTracking(models.Model):
     # 
     deliveryTakeOffTime = models.DateTimeField(null=True, blank = True)
     actualPackageDeliveryDateTime = models.DateTimeField(null=True, blank = True)
-    expectedDeliveryDate = models.CharField(null=True, blank = True)
-    expectedDeliveryTime = models.CharField(null=True, blank = True)
+    expectedDeliveryDate = models.CharField(max_length= 300, null=True, blank = True)
+    expectedDeliveryTime = models.CharField(max_length= 300, null=True, blank = True)
     
     # 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -336,9 +336,9 @@ def current_month():
 class NotificationActivity(models.Model):
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
     activityTtile = models.CharField(max_length=500, null=True, blank=True)
-    deliveryStatus = models.CharField(choices=TRANSACTION_STATUS, default='Pending')
+    deliveryStatus = models.CharField(max_length= 300, choices=TRANSACTION_STATUS, default='pending')
     amountSpent = models.CharField(max_length=500, null=True, blank=True)
-    transactionEffect = models.CharField(choices=TRANSACTION_EFFECT, default='Add')
+    transactionEffect = models.CharField(max_length= 300, choices=TRANSACTION_EFFECT, default='Add')
     month = models.CharField(
         max_length=2,
         default=current_month,
