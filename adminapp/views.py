@@ -40,7 +40,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import ShopperUsers, ErrandUsers
+from .models import ShopperUsers, ErrandUsers, UsersFCMTokenModel
 from .serializers import *
 from django.utils.timesince import timesince
 from django.utils.timezone import now
@@ -1020,6 +1020,41 @@ def CreateProduct(request):
         )
 
 
+@swagger_auto_schema(
+    tags=['AdminApp'],
+    method='post',
+    request_body=UpdateFCMTokenSerializer,
+)
+@api_view(['POST'])
+def SaveUserFCMToken(request):
+    print('SaveUserFCMToken CALLED')
+    print(request.data)
+    serializer = UpdateFCMTokenSerializer(data=request.data)
 
+    if serializer.is_valid():
+        token = serializer.validated_data.get('fcmtoken')
+        user = request.user
+        user_email = user.email if user.is_authenticated else None
+
+        # Check if token already exists
+        existing_token = UsersFCMTokenModel.objects.filter(user=user).first()
+
+        if existing_token:
+            # Delete existing token
+            existing_token.delete()
+
+        # Save new token
+        UsersFCMTokenModel.objects.create(
+            user=user,
+            userEmail=user_email,
+            FCMToken=token
+        )
+
+        return Response(
+            {"message": "FCM token saved successfully"},
+            status=status.HTTP_201_CREATED
+        )
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

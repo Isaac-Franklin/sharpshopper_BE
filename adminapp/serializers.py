@@ -186,3 +186,16 @@ class CreateProductSerializer(serializers.ModelSerializer):
             "productAvailability",
             "productImage",
         ]
+        
+
+
+
+
+class UpdateFCMTokenSerializer(serializers.Serializer):
+    fmtoken = serializers.CharField()
+
+
+
+
+
+

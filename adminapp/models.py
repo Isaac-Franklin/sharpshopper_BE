@@ -73,3 +73,19 @@ class ElectricityProviders(models.Model):
         return f'apiaccessname:{self.apiaccessname}. apiaccessname: {self.apiaccessname}'
 
 
+
+class UsersFCMTokenModel(models.Model):
+    user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+    userEmail = models.EmailField(null=True, blank = True)
+    FCMToken = models.CharField(max_length= 50000, null=True, blank = True)
+    # 
+    created_at = models.DateTimeField(auto_now_add=True)
+    edited_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-edited_at', '-created_at']
+        
+    def __str__(self):
+        return f'userEmail:{self.userEmail}. FCMToken: {self.FCMToken}'
+
+

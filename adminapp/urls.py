@@ -28,6 +28,7 @@ urlpatterns = [
     path("updatedataplans/<int:id>/", views.update_data_plan, name="update_data_plan"),
     path("deletedataplans/<int:id>/", views.delete_data_plan, name="delete_data_plan"),
     path("createagents/", views.RegisterAgent, name="RegisterAgent"),
+    path('savefcmtoken', views.SaveUserFCMToken, name="SaveUserFCMToken"),
     # path("editagents/", views.EditAgentProfile, name="EditAgentProfile"),
     
     # category and products

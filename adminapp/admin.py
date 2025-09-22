@@ -6,3 +6,4 @@ from .models import *
 admin.site.register(NetworkID)
 admin.site.register(DataPlans)
 admin.site.register(ElectricityProviders)
+admin.site.register(UsersFCMTokenModel)
